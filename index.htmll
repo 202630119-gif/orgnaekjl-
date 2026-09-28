@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>범위를 줄이자 - 다과목 통합 시험 플래너</title>
+    
+    <!-- PWA Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="범위를 줄이자">
+    <meta name="theme-color" content="#800020">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3426/3426653.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        burgundy: {
+                            400: '#a32a49',
+                            500: '#800020',
+                            600: '#6b001a',
+                            700: '#520014',
+                        },
+                        beige: {
+                            50: '#fdfbf7',
+                            100: '#f7f2ea',
+                            200: '#efe6d8',
+                            300: '#e2d3be',
+                            400: '#cfbba0',
+                        },
+                        warmcharcoal: '#2b1e1e',
+                        warmtext: '#4a3838',
+                        warmmuted: '#7a6868'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #fdfbf7;
+            color: #2b1e1e;
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(128, 0, 32, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(163, 42, 73, 0.02) 0%, transparent 45%);
+            background-attachment: fixed;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-card {
+            background: rgba(247, 242, 234, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(128, 0, 32, 0.15);
+            box-shadow: 0 10px 30px -10px rgba(74, 56, 56, 0.08);
+        }
+
+        .glass-card-interactive {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card-interactive:hover {
+            border-color: rgba(128, 0, 32, 0.35);
+            box-shadow: 0 12px 35px -5px rgba(128, 0, 32, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .burgundy-gradient-text {
+            background: linear-gradient(135deg, #6b001a 0%, #800020 50%, #a32a49 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .burgundy-btn {
+            background: linear-gradient(135deg, #800020 0%, #6b001a 100%);
+            color: #fdfbf7;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 15px rgba(128, 0, 32, 0.2);
+        }
+        .burgundy-btn:hover {
+            background: linear-gradient(135deg, #960c2b 0%, #800020 100%);
+            box-shadow: 0 6px 20px rgba(128, 0, 32, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(239, 230, 216, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(128, 0, 32, 0.25);
+            border-radius: 3px;
+        }
+
+        .custom-checkbox {
+            appearance: none;
+            background-color: #fdfbf7;
+            border: 1.5px solid rgba(128, 0, 32, 0.35);
+            border-radius: 6px;
+            width: 20px;
+            height: 20px;
+            display: inline-grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .custom-checkbox::before {
+            content: "\f00c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 11px;
+            color: #fdfbf7;
+            transform: scale(0);
+            transition: 0.15s transform ease-in-out;
+        }
+        .custom-checkbox:checked {
+            background-color: #800020;
+            border-color: #800020;
+        }
+        .custom-checkbox:checked::before {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-warmcharcoal selection:bg-burgundy-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="border-b border-burgundy-500/10 backdrop-blur-md sticky top-0 z-50 bg-beige-50/80">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="confirmReset()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-burgundy-500 to-burgundy-600 flex items-center justify-center text-beige-50 shadow-lg shadow-burgundy-500/20">
+                    <i class="fa-solid fa-compress-arrows-alt text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight burgundy-gradient-text">범위를 줄이자</h1>
+                    <p class="text-[10px] text-warmmuted tracking-widest uppercase font-semibold">Multi-Subject Planner</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <button id="resetAppBtn" onclick="confirmReset()" class="hidden text-xs text-warmmuted hover:text-burgundy-500 transition flex items-center space-x-1.5 py-1.5 px-3 rounded-lg border border-beige-300 hover:border-burgundy-500/30 bg-beige-100/50">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>초기화</span>
+                </button>
+                <div class="text-xs px-3 py-1.5 rounded-full border border-burgundy-500/20 text-burgundy-600 bg-burgundy-500/5 flex items-center space-x-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-burgundy-500 animate-pulse"></span>
+                    <span>다과목 엔진 v3.0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 flex-1 w-full flex flex-col justify-center">
+
+        <!-- Wizard Step Indicator -->
+        <div id="stepIndicator" class="max-w-xl mx-auto w-full mb-8 transition-all duration-300">
+            <div class="flex justify-between items-center relative">
+                <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-beige-300 -z-10"></div>
+                <div id="line-progress" class="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-burgundy-500 transition-all duration-500 -z-10" style="width: 0%"></div>
+                
+                <div class="step-node flex flex-col items-center space-y-2" data-step="1">
+                    <div class="w-8 h-8 rounded-full bg-beige-50 border-2 border-burgundy-500 text-burgundy-600 flex items-center justify-center text-xs font-bold transition">1</div>
+                    <span class="text-[11px] text-warmtext font-semibold">다과목 등록</span>
+                </div>
+                <div class="step-node flex flex-col items-center space-y-2" data-step="2">
+                    <div class="w-8 h-8 rounded-full bg-beige-50 border-2 border-beige-300 text-warmmuted flex items-center justify-center text-xs font-bold transition">2</div>
+                    <span class="text-[11px] text-warmmuted font-medium">통합 플래너 완성</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 1: Multi-Subject Form -->
+        <section id="step1" class="step-content max-w-2xl mx-auto w-full">
+            <div class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+                <div class="text-center space-y-2">
+                    <span class="text-xs font-bold text-burgundy-600 tracking-wider uppercase">Multi-Subject Setup</span>
+                    <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-warmcharcoal">시험 과목 종합 등록</h2>
+                    <p class="text-sm text-warmmuted">시험을 치를 과목들의 범위와 시험일을 모두 입력해 주세요.</p>
+                </div>
+
+                <div id="subjectListContainer" class="space-y-4">
+                    <!-- 과목 카드 아이템들이 동적으로 추가됩니다 -->
+                </div>
+
+                <button type="button" onclick="addSubjectInputCard()" class="w-full py-3 border-2 border-dashed border-burgundy-500/30 hover:border-burgundy-500/60 rounded-xl text-xs text-burgundy-700 font-bold bg-burgundy-500/5 hover:bg-burgundy-500/10 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>과목 추가하기</span>
+                </button>
+
+                <div class="pt-4 border-t border-beige-300">
+                    <button type="button" onclick="generateMultiPlan()" class="w-full burgundy-btn py-3.5 rounded-xl flex items-center justify-center space-x-2 text-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        <span>종합 학업 플랜 생성하기</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2: Multi-Plan Dashboard -->
+        <section id="step2" class="step-content space-y-6 hidden">
+            <!-- Metrics Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass-card rounded-2xl p-5 border-l-4 border-l-burgundy-500 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-warmmuted uppercase">Registered Subjects</p>
+                        <h3 id="dashSubjectCount" class="text-xl font-bold text-warmcharcoal mt-0.5">0개 과목</h3>
+                        <p id="dashSubjectsList" class="text-xs text-warmmuted mt-1 truncate max-w-[180px]">국어, 수학, 영어...</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-burgundy-500/10 border border-burgundy-500/20 flex items-center justify-center text-burgundy-600 text-xl">
+                        <i class="fa-solid fa-books"></i>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-warmmuted uppercase">Total Scope</p>
+                        <div class="flex items-baseline space-x-1 mt-0.5">
+                            <span id="dashTotalScopeSum" class="text-2xl font-extrabold burgundy-gradient-text">0</span>
+                            <span class="text-xs text-warmmuted">페이지(강)</span>
+                        </div>
+                        <p class="text-xs text-warmmuted mt-1">전 과목 누적 범위</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-beige-200/80 border border-beige-300 flex items-center justify-center text-warmcharcoal text-xl">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold text-warmmuted uppercase">Earliest Exam</p>
+                        <div class="flex items-baseline space-x-1 mt-0.5">
+                            <span id="dashNearestDDay" class="text-2xl font-extrabold text-rose-700">D-0</span>
+                        </div>
+                        <p id="dashNearestSubject" class="text-xs text-burgundy-600 font-semibold mt-1">가장 가까운 시험일</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-700 text-xl">
+                        <i class="fa-solid fa-clock font-bold"></i>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+                    <div class="w-full">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="text-[11px] font-bold text-warmmuted uppercase">Total Progress</p>
+                            <span id="progressPercent" class="text-xs font-bold text-burgundy-600">0%</span>
+                        </div>
+                        <div class="w-full bg-beige-200 rounded-full h-2.5 mt-2 overflow-hidden border border-beige-300">
+                            <div id="progressBar" class="bg-gradient-to-r from-burgundy-600 to-burgundy-400 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <p id="progressCountText" class="text-[11px] text-warmmuted mt-2">0 / 0 태스크 완료</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule List & Subject Filtering -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Checklist -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h3 class="text-lg font-bold text-warmcharcoal flex items-center space-x-2">
+                                    <i class="fa-solid fa-calendar-days text-burgundy-600 text-sm"></i>
+                                    <span>일자별 다과목 통합 플랜</span>
+                                </h3>
+                                <p class="text-xs text-warmmuted mt-1">날짜별로 공부할 모든 과목의 일일 범위가 배분됩니다.</p>
+                            </div>
+                            
+                            <!-- Subject Filter Dropdown -->
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-warmmuted font-medium">과목 필터:</span>
+                                <select id="subjectFilterSelect" onchange="filterScheduleBySubject()" class="bg-beige-100 border border-beige-300 text-xs font-semibold rounded-lg px-2.5 py-1.5 outline-none focus:border-burgundy-500 text-warmcharcoal">
+                                    <option value="ALL">전체 과목 보기</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="scheduleContainer" class="space-y-4 max-h-[560px] overflow-y-auto pr-1 custom-scrollbar">
+                            <!-- Dynamically Generated Multi-Plan Items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side Guides -->
+                <div class="space-y-6">
+                    <div class="glass-card rounded-2xl p-6 space-y-4">
+                        <h3 class="text-base font-bold text-warmcharcoal flex items-center space-x-2 border-b border-beige-300 pb-3">
+                            <i class="fa-solid fa-book-bookmark text-burgundy-600 text-sm"></i>
+                            <span>등록 과목 현황</span>
+                        </h3>
+                        <div id="subjectSummaryList" class="space-y-2.5 text-xs">
+                            <!-- 과목 요약 카드들 -->
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-6 space-y-4">
+                        <h3 class="text-base font-bold text-warmcharcoal flex items-center space-x-2 border-b border-beige-300 pb-3">
+                            <i class="fa-solid fa-lightbulb text-burgundy-600 text-sm"></i>
+                            <span>다과목 시험 가이드</span>
+                        </h3>
+                        <div class="space-y-2 text-xs text-warmtext">
+                            <p class="bg-beige-100/50 p-3 rounded-xl border border-beige-300">
+                                📌 <b>시험일이 가까운 과목 우선</b>: D-Day가 빠른 과목의 일일 목표량을 먼저 달성하고 다음 과목으로 넘어가세요.
+                            </p>
+                            <p class="bg-beige-100/50 p-3 rounded-xl border border-beige-300">
+                                🧠 <b>과목 교체 공부법</b>: 한 과목만 4시간 이상 계속하기보다 암기 과목과 이해/수리 과목을 번갈아 배치하면 피로도가 줄어듭니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-beige-300 py-6 text-center text-xs text-warmmuted bg-beige-100/30">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
+            <p>© 2026 범위를 줄이자 (Reduce the Scope). All rights reserved.</p>
+            <p class="text-warmmuted font-medium">다과목 스마트 시험 범위 압축 플래너</p>
+        </div>
+    </footer>
+
+    <!-- Logic -->
+    <script>
+        const STORAGE_KEY = 'REDUCE_SCOPE_MULTI_APP_DATA_V1';
+        const SUBJECT_COLORS = [
+            { bg: 'bg-burgundy-500/10', text: 'text-burgundy-700', border: 'border-burgundy-500/30', badge: 'bg-burgundy-600' },
+            { bg: 'bg-amber-600/10', text: 'text-amber-800', border: 'border-amber-600/30', badge: 'bg-amber-600' },
+            { bg: 'bg-emerald-600/10', text: 'text-emerald-800', border: 'border-emerald-600/30', badge: 'bg-emerald-600' },
+            { bg: 'bg-blue-600/10', text: 'text-blue-800', border: 'border-blue-600/30', badge: 'bg-blue-600' },
+            { bg: 'bg-purple-600/10', text: 'text-purple-800', border: 'border-purple-600/30', badge: 'bg-purple-600' }
+        ];
+
+        let appData = {
+            subjects: [],
+            tasks: []
+        };
+
+        window.onload = function() {
+            loadSavedState();
+        };
+
+        function addSubjectInputCard(initialData = null) {
+            const container = document.getElementById('subjectListContainer');
+            const cardId = 'subj-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+
+            const defaultExam = new Date();
+            defaultExam.setDate(defaultExam.getDate() + 7);
+            const defaultDateStr = defaultExam.toISOString().split('T')[0];
+
+            const card = document.createElement('div');
+            card.className = 'glass-card-interactive border border-beige-300 bg-beige-50/90 rounded-2xl p-5 space-y-4 subject-card relative';
+            card.dataset.cardId = cardId;
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b border-beige-200 pb-3">
+                    <span class="text-xs font-bold text-burgundy-700 uppercase tracking-wider flex items-center space-x-1.5">
+                        <i class="fa-solid fa-book"></i>
+                        <span class="card-title-label">과목 정보</span>
+                    </span>
+                    <button type="button" onclick="removeSubjectInputCard(this)" class="text-warmmuted hover:text-rose-600 text-xs px-2 py-1 rounded transition">
+                        <i class="fa-solid fa-trash-can mr-1"></i>삭제
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-warmtext mb-1 uppercase">과목명</label>
+                        <input type="text" class="input-subject-name w-full bg-beige-100/60 border border-beige-300 rounded-xl px-3 py-2 text-xs text-warmcharcoal font-medium outline-none focus:border-burgundy-500" placeholder="예: 한국사, 수학 I, 영어" value="${initialData ? initialData.name : ''}" required>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-warmtext mb-1 uppercase">시험 시작일</label>
+                        <input type="date" class="input-exam-date w-full bg-beige-100/60 border border-beige-300 rounded-xl px-3 py-2 text-xs text-warmcharcoal font-medium outline-none focus:border-burgundy-500" value="${initialData ? initialData.examDate : defaultDateStr}" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-warmtext mb-1 uppercase">전체 범위 (p/강)</label>
+                        <input type="number" min="1" class="input-total-scope w-full bg-beige-100/60 border border-beige-300 rounded-xl px-3 py-2 text-xs text-warmcharcoal font-medium outline-none focus:border-burgundy-500" placeholder="100" value="${initialData ? initialData.scope : ''}" required>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-warmtext mb-1 uppercase">휴식일 (일)</label>
+                        <input type="number" min="0" value="${initialData ? initialData.restDays : 0}" class="input-rest-days w-full bg-beige-100/60 border border-beige-300 rounded-xl px-3 py-2 text-xs text-warmcharcoal font-medium outline-none focus:border-burgundy-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-warmtext mb-1 uppercase">긴급도/난이도</label>
+                        <select class="input-level w-full bg-beige-100/60 border border-beige-300 rounded-xl px-2 py-2 text-xs text-warmcharcoal font-medium outline-none focus:border-burgundy-500">
+                            <option value="emergency" ${initialData && initialData.level === 'emergency' ? 'selected' : ''}>벼락치기 (-40%)</option>
+                            <option value="standard" ${!initialData || initialData.level === 'standard' ? 'selected' : ''}>표준 분량</option>
+                            <option value="thorough" ${initialData && initialData.level === 'thorough' ? 'selected' : ''}>완벽 3회독</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(card);
+            updateSubjectCardTitles();
+        }
+
+        function removeSubjectInputCard(btn) {
+            const cards = document.querySelectorAll('.subject-card');
+            if (cards.length <= 1) {
+                showCustomModal("최소 1개 이상의 과목이 필요합니다.");
+                return;
+            }
+            btn.closest('.subject-card').remove();
+            updateSubjectCardTitles();
+        }
+
+        function updateSubjectCardTitles() {
+            document.querySelectorAll('.subject-card').forEach((card, idx) => {
+                const label = card.querySelector('.card-title-label');
+                if (label) label.innerText = `과목 ${idx + 1}`;
+            });
+        }
+
+        function generateMultiPlan() {
+            const cards = document.querySelectorAll('.subject-card');
+            let parsedSubjects = [];
+
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const name = card.querySelector('.input-subject-name').value.trim();
+                const examDate = card.querySelector('.input-exam-date').value;
+                const scope = parseInt(card.querySelector('.input-total-scope').value);
+                const restDays = parseInt(card.querySelector('.input-rest-days').value) || 0;
+                const level = card.querySelector('.input-level').value;
+
+                if (!name || isNaN(scope) || scope <= 0 || !examDate) {
+                    showCustomModal(`과목 ${i + 1}의 모든 항목을 올바르게 채워주세요.`);
+                    return;
+                }
+
+                const target = new Date(examDate);
+                target.setHours(0,0,0,0);
+                const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 0) {
+                    showCustomModal(`'${name}' 과목의 시험 날짜는 오늘 이후로 지정해야 합니다.`);
+                    return;
+                }
+
+                parsedSubjects.push({
+                    id: 'sub-' + i + '-' + Date.now(),
+                    name: name,
+                    examDate: examDate,
+                    dDay: diffDays,
+                    scope: scope,
+                    restDays: restDays,
+                    level: level,
+                    color: SUBJECT_COLORS[i % SUBJECT_COLORS.length]
+                });
+            }
+
+            // 태스크 생성 (통합 날짜 스케줄)
+            let generatedTasks = [];
+
+            parsedSubjects.forEach((sub) => {
+                const actualDays = Math.max(1, sub.dDay - sub.restDays);
+                const dailyScope = Math.ceil(sub.scope / actualDays);
+                let currentStart = 1;
+
+                for (let day = 1; day <= sub.dDay; day++) {
+                    const isRest = (sub.restDays > 0 && day % Math.floor(sub.dDay / sub.restDays) === 0 && sub.restDays > 0);
+                    
+                    if (isRest && day !== sub.dDay) {
+                        generatedTasks.push({
+                            taskId: `${sub.id}-day-${day}`,
+                            subjectId: sub.id,
+                            subjectName: sub.name,
+                            dayNum: day,
+                            title: `Day ${day} - [복습 및 정리]`,
+                            rangeText: `새 범위 없음 (오답 노트를점검하세요)`,
+                            isRest: true,
+                            completed: false,
+                            color: sub.color
+                        });
+                    } else {
+                        let endScope = Math.min(sub.scope, currentStart + dailyScope - 1);
+                        if (currentStart > sub.scope) {
+                            generatedTasks.push({
+                                taskId: `${sub.id}-day-${day}`,
+                                subjectId: sub.id,
+                                subjectName: sub.name,
+                                dayNum: day,
+                                title: `Day ${day} - [최종 모의점검]`,
+                                rangeText: `전 범위 요약 노트 회독`,
+                                isRest: false,
+                                completed: false,
+                                color: sub.color
+                            });
+                        } else {
+                            generatedTasks.push({
+                                taskId: `${sub.id}-day-${day}`,
+                                subjectId: sub.id,
+                                subjectName: sub.name,
+                                dayNum: day,
+                                title: `Day ${day} - 범위 공부`,
+                                rangeText: `p. ${currentStart} ~ p. ${endScope} (${endScope - currentStart + 1}p)`,
+                                isRest: false,
+                                completed: false,
+                                color: sub.color
+                            });
+                            currentStart = endScope + 1;
+                        }
+                    }
+                }
+            });
+
+            appData = {
+                subjects: parsedSubjects,
+                tasks: generatedTasks
+            };
+
+            saveStateToStorage();
+            renderDashboard();
+            goToStep(2);
+
+            document.getElementById('stepIndicator').classList.add('hidden');
+            document.getElementById('resetAppBtn').classList.remove('hidden');
+        }
+
+        function renderDashboard() {
+            // Summary Cards
+            document.getElementById('dashSubjectCount').innerText = `${appData.subjects.length}개 과목`;
+            document.getElementById('dashSubjectsList').innerText = appData.subjects.map(s => s.name).join(', ');
+
+            const totalScopeSum = appData.subjects.reduce((sum, s) => sum + s.scope, 0);
+            document.getElementById('dashTotalScopeSum').innerText = totalScopeSum;
+
+            // Nearest Exam
+            const sortedByDDay = [...appData.subjects].sort((a,b) => a.dDay - b.dDay);
+            if (sortedByDDay.length > 0) {
+                document.getElementById('dashNearestDDay').innerText = `D-${sortedByDDay[0].dDay}`;
+                document.getElementById('dashNearestSubject').innerText = `가장 빠른 시험: ${sortedByDDay[0].name}`;
+            }
+
+            // Filter Options
+            const filterSelect = document.getElementById('subjectFilterSelect');
+            filterSelect.innerHTML = '<option value="ALL">전체 과목 보기</option>';
+            appData.subjects.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.innerText = s.name;
+                filterSelect.appendChild(opt);
+            });
+
+            // Subject Summary List Card
+            const summaryContainer = document.getElementById('subjectSummaryList');
+            summaryContainer.innerHTML = '';
+            appData.subjects.forEach(s => {
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-xl border ${s.color.border} ${s.color.bg} flex justify-between items-center`;
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-warmcharcoal block">${s.name}</span>
+                        <span class="text-[11px] text-warmmuted">범위: ${s.scope}p / 휴식: ${s.restDays}일</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${s.color.badge} text-white">D-${s.dDay}</span>
+                    </div>
+                `;
+                summaryContainer.appendChild(item);
+            });
+
+            renderScheduleTasks();
+            updateProgressMetrics();
+        }
+
+        function renderScheduleTasks(filterSubjectId = 'ALL') {
+            const container = document.getElementById('scheduleContainer');
+            container.innerHTML = '';
+
+            let filteredTasks = appData.tasks;
+            if (filterSubjectId !== 'ALL') {
+                filteredTasks = appData.tasks.filter(t => t.subjectId === filterSubjectId);
+            }
+
+            // 날짜(Day)별로 그룹화
+            let maxDays = Math.max(...filteredTasks.map(t => t.dayNum), 0);
+
+            if (filteredTasks.length === 0) {
+                container.innerHTML = '<p class="text-center text-xs text-warmmuted py-8">해당하는 과목의 플랜이 없습니다.</p>';
+                return;
+            }
+
+            for (let day = 1; day <= maxDays; day++) {
+                const dayTasks = filteredTasks.filter(t => t.dayNum === day);
+                if (dayTasks.length === 0) continue;
+
+                const dayGroup = document.createElement('div');
+                dayGroup.className = 'space-y-2';
+
+                let tasksHTML = '';
+                dayTasks.forEach(t => {
+                    const taskIndex = appData.tasks.findIndex(orig => orig.taskId === t.taskId);
+                    tasksHTML += `
+                        <div class="glass-card-interactive border rounded-xl p-3.5 flex items-center justify-between ${t.completed ? 'opacity-65 bg-emerald-700/5 border-emerald-600/30' : 'bg-beige-50/80 border-beige-300'}">
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${taskIndex})" class="custom-checkbox">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-bold text-white ${t.color.badge}">${t.subjectName}</span>
+                                        <span class="font-bold text-xs ${t.completed ? 'line-through text-warmmuted' : 'text-warmcharcoal'}">${t.title}</span>
+                                    </div>
+                                    <p class="text-[11px] text-warmmuted mt-1">${t.rangeText}</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-semibold ${t.completed ? 'text-emerald-700' : 'text-warmmuted'}">
+                                ${t.completed ? '완료' : '진행중'}
+                            </span>
+                        </div>
+                    `;
+                });
+
+                dayGroup.innerHTML = `
+                    <div class="text-xs font-bold text-burgundy-700 flex items-center space-x-1.5 pt-2">
+                        <i class="fa-regular fa-calendar font-bold"></i>
+                        <span>Day ${day} 학습 일정</span>
+                    </div>
+                    <div class="space-y-2">${tasksHTML}</div>
+                `;
+                container.appendChild(dayGroup);
+            }
+        }
+
+        function toggleTask(index) {
+            if (index < 0 || index >= appData.tasks.length) return;
+            appData.tasks[index].completed = !appData.tasks[index].completed;
+            saveStateToStorage();
+            
+            const currentFilter = document.getElementById('subjectFilterSelect').value;
+            renderScheduleTasks(currentFilter);
+            updateProgressMetrics();
+        }
+
+        function filterScheduleBySubject() {
+            const filterValue = document.getElementById('subjectFilterSelect').value;
+            renderScheduleTasks(filterValue);
+        }
+
+        function updateProgressMetrics() {
+            const total = appData.tasks.length;
+            if (total === 0) return;
+
+            const completed = appData.tasks.filter(t => t.completed).length;
+            const percentage = Math.round((completed / total) * 100);
+
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+            document.getElementById('progressPercent').innerText = `${percentage}%`;
+            document.getElementById('progressCountText').innerText = `${completed} / ${total} 태스크 완료`;
+        }
+
+        function goToStep(step) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`step${step}`).classList.remove('hidden');
+
+            const nodes = document.querySelectorAll('.step-node');
+            const progressLine = document.getElementById('line-progress');
+
+            nodes.forEach((node, idx) => {
+                const nodeStep = idx + 1;
+                const circle = node.querySelector('div');
+                const text = node.querySelector('span');
+
+                if (nodeStep <= step) {
+                    circle.classList.remove('border-beige-300', 'text-warmmuted');
+                    circle.classList.add('border-burgundy-500', 'text-burgundy-600');
+                    text.classList.remove('text-warmmuted');
+                    text.classList.add('text-warmtext', 'font-semibold');
+                } else {
+                    circle.classList.remove('border-burgundy-500', 'text-burgundy-600');
+                    circle.classList.add('border-beige-300', 'text-warmmuted');
+                    text.classList.remove('text-warmtext', 'font-semibold');
+                    text.classList.add('text-warmmuted');
+                }
+            });
+
+            if (step === 1) progressLine.style.width = '0%';
+            else if (step === 2) progressLine.style.width = '100%';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function saveStateToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            } catch(e) {
+                console.warn('LocalStorage save error', e);
+            }
+        }
+
+        function loadSavedState() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (data) {
+                    appData = JSON.parse(data);
+                    if (appData && appData.subjects && appData.subjects.length > 0) {
+                        goToStep(2);
+                        renderDashboard();
+                        document.getElementById('stepIndicator').classList.add('hidden');
+                        document.getElementById('resetAppBtn').classList.remove('hidden');
+                        return;
+                    }
+                }
+            } catch(e) {
+                console.error('State load error', e);
+            }
+
+            // 기본 과목 카드 2개 추가
+            document.getElementById('subjectListContainer').innerHTML = '';
+            addSubjectInputCard({ name: '국어', scope: 120, restDays: 1, level: 'standard' });
+            addSubjectInputCard({ name: '수학', scope: 80, restDays: 0, level: 'emergency' });
+        }
+
+        function confirmReset() {
+            if (window.confirm("등록된 모든 과목과 통합 플랜 데이터를 초기화하시겠습니까?")) {
+                performFullReset();
+            }
+        }
+
+        function performFullReset() {
+            localStorage.removeItem(STORAGE_KEY);
+            appData = { subjects: [], tasks: [] };
+
+            document.getElementById('subjectListContainer').innerHTML = '';
+            addSubjectInputCard({ name: '국어', scope: 120, restDays: 1, level: 'standard' });
+            addSubjectInputCard({ name: '수학', scope: 80, restDays: 0, level: 'emergency' });
+
+            document.getElementById('stepIndicator').classList.remove('hidden');
+            document.getElementById('resetAppBtn').classList.add('hidden');
+
+            goToStep(1);
+        }
+
+        function showCustomModal(msg) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-warmcharcoal/40 backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="glass-card max-w-sm w-full p-6 rounded-2xl border border-burgundy-500/30 text-center space-y-4 shadow-xl">
+                    <div class="w-12 h-12 rounded-full bg-burgundy-500/10 text-burgundy-600 flex items-center justify-center mx-auto text-xl border border-burgundy-500/20">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <p class="text-sm text-warmcharcoal font-medium">${msg}</p>
+                    <button onclick="this.closest('.fixed').remove()" class="w-full burgundy-btn py-2.5 rounded-xl text-xs font-bold">확인</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
